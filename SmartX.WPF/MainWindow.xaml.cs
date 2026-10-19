@@ -25,12 +25,10 @@ namespace SmartX.WPF
             InitializeComponent();
             _httpClient = new HttpClient { BaseAddress = new Uri(GatewayUrl), Timeout = TimeSpan.FromSeconds(10) };
 
-           
             _insightsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
             _insightsTimer.Tick += async (s, e) => await RefreshInsightsAsync();
         }
 
-       
         private async void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -63,7 +61,7 @@ namespace SmartX.WPF
                 {
                     DeviceId = $"ESP32-{random.Next(1, 5)}",
                     SensorType = "SoilMoisture",
-                    Value = random.Next(10, 60), 
+                    Value = random.Next(10, 60),
                     Unit = "%",
                     Timestamp = DateTime.UtcNow,
                     IsConnected = true
@@ -93,8 +91,6 @@ namespace SmartX.WPF
             }
             catch { }
         }
-
-       
 
         private async Task RefreshInsightsAsync()
         {
@@ -161,7 +157,6 @@ namespace SmartX.WPF
             catch { }
         }
 
-  
         private async void UploadDevices_Click(object sender, RoutedEventArgs e)
         {
             if (!_isConnected) return;
@@ -176,11 +171,9 @@ namespace SmartX.WPF
                 var response = await _httpClient.PostAsync("/api/telemetry/upload-devices", content);
                 if (response.IsSuccessStatusCode)
                 {
-                  
                     var devicesJson = await _httpClient.GetStringAsync("/api/telemetry/devices");
                     var devices = JsonSerializer.Deserialize<List<Device>>(devicesJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                 
                     DeviceGrid.ItemsSource = null;
                     DeviceGrid.ItemsSource = devices;
 
@@ -192,9 +185,16 @@ namespace SmartX.WPF
                 }
             }
         }
+
+      
+        private void LogoutButton_Click(object sender, RoutedEventArgs e)
+        {
+            var loginWindow = new LoginWindow();
+            loginWindow.Show();
+            this.Close();
+        }
     }
 
-   
     public class TelemetryData
     {
         public int Id { get; set; }

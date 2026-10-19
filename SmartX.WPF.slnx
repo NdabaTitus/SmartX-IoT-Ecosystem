@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Solution Items/" />
   <Project Path="SmartX.Gateway/SmartX.Gateway.csproj" />
+  <Project Path="SmartX.Tests/SmartX.Tests.csproj" Id="66a248d9-68dd-46b2-a6ac-80808c88ec1e" />
   <Project Path="SmartX.WPF/SmartX.WPF.csproj" />
 </Solution>

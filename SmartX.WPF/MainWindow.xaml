@@ -5,7 +5,6 @@
         Background="#1E1E2E" WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
-        <!-- Existing Styles remain unchanged -->
         <SolidColorBrush x:Key="PanelBackground" Color="#2D2D44"/>
         <SolidColorBrush x:Key="AccentGreen" Color="#00D9A5"/>
         <SolidColorBrush x:Key="AccentBlue" Color="#4A9EFF"/>
@@ -56,7 +55,8 @@
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                     <Ellipse x:Name="StatusIndicator" Width="12" Height="12" Fill="{StaticResource AccentRed}" VerticalAlignment="Center"/>
                     <TextBlock x:Name="StatusText" Text="Disconnected" Foreground="{StaticResource TextSecondary}" Margin="8,0,0,0" VerticalAlignment="Center"/>
-                    <Button x:Name="ConnectButton" Content="🔌 Connect" Style="{StaticResource ActionButton}" Click="ConnectButton_Click" Margin="15,0,0,0"/>
+                    <Button x:Name="ConnectButton" Content="🔌 Connect" Style="{StaticResource ActionButton}" Click="ConnectButton_Click" Margin="15,0,10,0"/>
+                    <Button x:Name="LogoutButton" Content="🚪 Logout" Style="{StaticResource ActionButton}" Background="{StaticResource AccentRed}" Click="LogoutButton_Click"/>
                 </StackPanel>
             </Grid>
         </Border>
