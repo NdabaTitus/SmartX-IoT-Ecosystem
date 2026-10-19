@@ -8,14 +8,16 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # CHANGE: Use a Windows server instead of Ubuntu, because WPF is Windows-only
+    runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
+    
     - name: Setup .NET
-      uses: actions/setup-dotnet@v3
+      uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x' # Matches your project's .NET version
+        dotnet-version: '10.0.x'
         
     - name: Restore dependencies
       run: dotnet restore
