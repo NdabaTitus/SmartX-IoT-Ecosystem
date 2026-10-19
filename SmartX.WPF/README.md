@@ -56,4 +56,4 @@ AI helped design the dark-themed XAML layout, specifically the `TabControl` navi
 ---
 
 ##  Video Demonstration
-*[Watch the video here](YOUR_YOUTUBE_LINK)*
+*[Watch the video here](https://youtu.be/jBxjDMbt_fg)*
