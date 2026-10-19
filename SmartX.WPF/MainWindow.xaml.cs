@@ -1,345 +1,216 @@
-﻿using System.IO;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Win32;
-using SmartX.WPF.Models;
 
 namespace SmartX.WPF
 {
     public partial class MainWindow : Window
     {
         private readonly HttpClient _httpClient;
-        private readonly DispatcherTimer _refreshTimer;
-        private readonly Random _random = new();
+        private readonly DispatcherTimer _insightsTimer;
         private bool _isConnected = false;
-
         private const string GatewayUrl = "http://localhost:5044";
-
-        private readonly string[] _deviceIds = {
-            "ESP32-FARM-01", "ESP32-FARM-02",
-            "ESP32-GRID-01", "ESP32-GRID-02",
-            "ESP32-BUILD-01"
-        };
-
-        private readonly string[] _sensorTypes = {
-            "SoilMoisture", "PowerWattage", "ValveState",
-            "Temperature", "Humidity"
-        };
-
-        private readonly string[] _units = { "%", "W", "bool", "°C", "%" };
 
         public MainWindow()
         {
             InitializeComponent();
+            _httpClient = new HttpClient { BaseAddress = new Uri(GatewayUrl), Timeout = TimeSpan.FromSeconds(10) };
 
-            _httpClient = new HttpClient();
-            _httpClient.BaseAddress = new Uri(GatewayUrl);
-            _httpClient.Timeout = TimeSpan.FromSeconds(10);
-
-            _refreshTimer = new DispatcherTimer
-            {
-                Interval = TimeSpan.FromSeconds(3)
-            };
-            _refreshTimer.Tick += async (s, e) => await RefreshDataAsync();
+           
+            _insightsTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(5) };
+            _insightsTimer.Tick += async (s, e) => await RefreshInsightsAsync();
         }
 
-        // ============================================================
-        // Connection
-        // ============================================================
+       
         private async void ConnectButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
                 var response = await _httpClient.GetAsync("/api/telemetry/statistics");
-
                 if (response.IsSuccessStatusCode)
                 {
                     _isConnected = true;
                     StatusIndicator.Fill = System.Windows.Media.Brushes.LimeGreen;
                     StatusText.Text = "Connected";
-                    StatusText.Foreground = System.Windows.Media.Brushes.LimeGreen;
-
-                    _refreshTimer.Start();
+                    _insightsTimer.Start();
                     await RefreshDataAsync();
-
-                    MessageBox.Show("Successfully connected to Smart-X Gateway!",
-                        "Connection Status", MessageBoxButton.OK, MessageBoxImage.Information);
-                }
-                else
-                {
-                    throw new Exception($"Server returned {response.StatusCode}");
+                    MessageBox.Show("Connected to Gateway!", "Success");
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                _isConnected = false;
-                StatusIndicator.Fill = System.Windows.Media.Brushes.Red;
-                StatusText.Text = "Disconnected";
-                StatusText.Foreground = System.Windows.Media.Brushes.Red;
-
-                MessageBox.Show(
-                    $"Failed to connect to gateway.\n\nMake sure the Gateway is running at {GatewayUrl}\n\nError: {ex.Message}",
-                    "Connection Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show("Failed to connect to Gateway.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        // ============================================================
-        // Generate Simulated Test Data
-        // ============================================================
         private async void GenerateDataButton_Click(object sender, RoutedEventArgs e)
         {
-            if (!_isConnected)
-            {
-                MessageBox.Show("Please connect to the gateway first!",
-                    "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
+            if (!_isConnected) return;
+            var random = new Random();
 
-            try
+            for (int i = 0; i < 3; i++)
             {
-                int batchSize = _random.Next(5, 15);
-
-                for (int i = 0; i < batchSize; i++)
+                var data = new TelemetryData
                 {
-                    int sensorIndex = _random.Next(_sensorTypes.Length);
-
-                    var telemetry = new TelemetryData
-                    {
-                        DeviceId = _deviceIds[_random.Next(_deviceIds.Length)],
-                        SensorType = _sensorTypes[sensorIndex],
-                        Value = GenerateRealisticValue(sensorIndex),
-                        Unit = _units[sensorIndex],
-                        Timestamp = DateTime.UtcNow,
-                        IsConnected = _random.Next(100) > 10
-                    };
-
-                    await _httpClient.PostAsJsonAsync("/api/telemetry", telemetry);
-                }
-
-                await RefreshDataAsync();
+                    DeviceId = $"ESP32-{random.Next(1, 5)}",
+                    SensorType = "SoilMoisture",
+                    Value = random.Next(10, 60), 
+                    Unit = "%",
+                    Timestamp = DateTime.UtcNow,
+                    IsConnected = true
+                };
+                await _httpClient.PostAsJsonAsync("/api/telemetry", data);
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error sending data: {ex.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
-        }
-
-        private double GenerateRealisticValue(int sensorIndex)
-        {
-            return sensorIndex switch
-            {
-                0 => Math.Round(_random.NextDouble() * 100, 1),
-                1 => Math.Round(_random.NextDouble() * 5000, 2),
-                2 => _random.Next(2),
-                3 => Math.Round(15 + _random.NextDouble() * 20, 1),
-                4 => Math.Round(30 + _random.NextDouble() * 60, 1),
-                _ => _random.NextDouble() * 100
-            };
-        }
-
-        // ============================================================
-        // Refresh Data
-        // ============================================================
-        private async void RefreshButton_Click(object sender, RoutedEventArgs e)
-        {
             await RefreshDataAsync();
+        }
+
+        private async void RefreshButton_Click(object sender, RoutedEventArgs e) => await RefreshDataAsync();
+
+        private async void ClearButton_Click(object sender, RoutedEventArgs e)
+        {
+            await _httpClient.DeleteAsync("/api/telemetry/clear");
+            TelemetryGrid.ItemsSource = null;
+            InsightsListBox.ItemsSource = null;
         }
 
         private async Task RefreshDataAsync()
         {
             if (!_isConnected) return;
-
             try
             {
-                var telemetryResponse = await _httpClient.GetAsync("/api/telemetry");
-                if (telemetryResponse.IsSuccessStatusCode)
-                {
-                    var json = await telemetryResponse.Content.ReadAsStringAsync();
-                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    var data = JsonSerializer.Deserialize<List<TelemetryData>>(json, options);
-
-                    if (data != null)
-                    {
-                        TelemetryGrid.ItemsSource = data
-                            .OrderByDescending(t => t.Timestamp)
-                            .Take(100)
-                            .ToList();
-                    }
-                }
-
-                var statsResponse = await _httpClient.GetAsync("/api/telemetry/statistics");
-                if (statsResponse.IsSuccessStatusCode)
-                {
-                    var json = await statsResponse.Content.ReadAsStringAsync();
-                    var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                    var stats = JsonSerializer.Deserialize<TelemetryStatistics>(json, options);
-
-                    if (stats != null)
-                    {
-                        TotalReadingsText.Text = stats.TotalReadings.ToString();
-                        ActiveDevicesText.Text = stats.UniqueDevices.ToString();
-                        AverageValueText.Text = stats.AverageValue.ToString("F1");
-                        DisconnectedText.Text = stats.DisconnectedCount.ToString();
-                    }
-                }
+                var json = await _httpClient.GetStringAsync("/api/telemetry");
+                var data = JsonSerializer.Deserialize<List<TelemetryData>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+                TelemetryGrid.ItemsSource = data?.OrderByDescending(t => t.Timestamp).Take(100).ToList();
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Refresh error: {ex.Message}");
-            }
+            catch { }
         }
 
-        // ============================================================
-        // Clear Data
-        // ============================================================
-        private async void ClearButton_Click(object sender, RoutedEventArgs e)
+       
+
+        private async Task RefreshInsightsAsync()
         {
-            if (!_isConnected)
+            if (!_isConnected) return;
+            try
             {
-                MessageBox.Show("Please connect to the gateway first!",
-                    "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                var json = await _httpClient.GetStringAsync("/api/telemetry/insights");
+                var insights = JsonSerializer.Deserialize<List<string>>(json);
+                InsightsListBox.ItemsSource = insights;
             }
-
-            var result = MessageBox.Show(
-                "Are you sure you want to clear all telemetry data?",
-                "Confirm Clear", MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-            if (result == MessageBoxResult.Yes)
-            {
-                try
-                {
-                    await _httpClient.DeleteAsync("/api/telemetry/clear");
-                    TelemetryGrid.ItemsSource = null;
-                    TotalReadingsText.Text = "0";
-                    ActiveDevicesText.Text = "0";
-                    AverageValueText.Text = "0.0";
-                    DisconnectedText.Text = "0";
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Error clearing data: {ex.Message}",
-                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
+            catch { }
         }
 
-        // ============================================================
-        // Attach File (OpenFileDialog + Multipart Upload)
-        // ============================================================
-        private async void AttachFile_Click(object sender, RoutedEventArgs e)
+        private async void SearchButton_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new OpenFileDialog
+            if (!_isConnected) return;
+            try
             {
-                Title = "Select a configuration file, photo, or hardware log",
-                Filter = "All Files (*.*)|*.*|" +
-                         "Config Files (*.json;*.xml;*.yaml)|*.json;*.xml;*.yaml|" +
-                         "Images (*.png;*.jpg;*.jpeg)|*.png;*.jpg;*.jpeg|" +
-                         "Log Files (*.log;*.txt)|*.log;*.txt"
-            };
+                await _httpClient.PostAsJsonAsync("/api/telemetry/command", new
+                {
+                    deviceMacAddress = "SYSTEM",
+                    action = $"SEARCHED: {SearchBox.Text}"
+                });
+                await RefreshInsightsAsync();
+            }
+            catch { }
+        }
 
+        private async void CommandPump_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isConnected) return;
+            await _httpClient.PostAsJsonAsync("/api/telemetry/command", new
+            {
+                deviceMacAddress = "ESP32-01",
+                action = "Turn On Pump"
+            });
+            await RefreshInsightsAsync();
+            MessageBox.Show("Pump command issued!");
+        }
+
+        private async void CommandRelay_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isConnected) return;
+            await _httpClient.PostAsJsonAsync("/api/telemetry/command", new
+            {
+                deviceMacAddress = "ESP32-02",
+                action = "Toggle Relay"
+            });
+            await RefreshInsightsAsync();
+            MessageBox.Show("Relay toggled!");
+        }
+
+        private async void UndoCommand_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isConnected) return;
+            try
+            {
+                var response = await _httpClient.PostAsync("/api/telemetry/undo", null);
+                if (response.IsSuccessStatusCode)
+                    MessageBox.Show("Last command undone successfully.");
+                else
+                    MessageBox.Show("No commands to undo.");
+            }
+            catch { }
+        }
+
+  
+        private async void UploadDevices_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isConnected) return;
+
+            var dialog = new OpenFileDialog { Filter = "Text Files (*.txt)|*.txt" };
             if (dialog.ShowDialog() == true)
             {
-                try
-                {
-                    string deviceId = MacAddressBox.Text.Trim();
-                    if (string.IsNullOrEmpty(deviceId))
-                    {
-                        MessageBox.Show("Please enter a MAC address first.",
-                            "Missing Device ID", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        return;
-                    }
+                using var content = new MultipartFormDataContent();
+                var fileStream = File.OpenRead(dialog.FileName);
+                content.Add(new StreamContent(fileStream), "file", Path.GetFileName(dialog.FileName));
 
-                    using var content = new MultipartFormDataContent();
-                    var fileStream = File.OpenRead(dialog.FileName);
-                    var fileContent = new StreamContent(fileStream);
-                    fileContent.Headers.ContentType =
-                        new MediaTypeHeaderValue("application/octet-stream");
-                    content.Add(fileContent, "file", Path.GetFileName(dialog.FileName));
-
-                    var response = await _httpClient.PostAsync(
-                        $"/api/telemetry/upload/{deviceId}", content);
-
-                    if (response.IsSuccessStatusCode)
-                    {
-                        MessageBox.Show(
-                            $"File '{Path.GetFileName(dialog.FileName)}' uploaded successfully!",
-                            "Upload Complete", MessageBoxButton.OK, MessageBoxImage.Information);
-                    }
-                    else
-                    {
-                        MessageBox.Show($"Upload failed: {response.StatusCode}",
-                            "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Upload error: {ex.Message}",
-                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-
-        // ============================================================
-        // Register Sensor
-        // ============================================================
-        private async void RegisterSensor_Click(object sender, RoutedEventArgs e)
-        {
-            if (!_isConnected)
-            {
-                MessageBox.Show("Please connect to the gateway first!",
-                    "Not Connected", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
-            }
-
-            try
-            {
-                var selectedCategory = (CategoryCombo.SelectedItem as ComboBoxItem)?.Content?.ToString()
-                                       ?? "Unknown";
-
-                var registration = new
-                {
-                    macAddress = MacAddressBox.Text.Trim(),
-                    location = LocationBox.Text.Trim(),
-                    category = selectedCategory
-                };
-
-                if (string.IsNullOrEmpty(registration.macAddress))
-                {
-                    MessageBox.Show("MAC Address is required.",
-                        "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-
-                var response = await _httpClient.PostAsJsonAsync(
-                    "/api/telemetry/sensor/register", registration);
-
+                var response = await _httpClient.PostAsync("/api/telemetry/upload-devices", content);
                 if (response.IsSuccessStatusCode)
                 {
-                    MessageBox.Show(
-                        $"Sensor '{registration.macAddress}' registered successfully!",
-                        "Registration Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+                  
+                    var devicesJson = await _httpClient.GetStringAsync("/api/telemetry/devices");
+                    var devices = JsonSerializer.Deserialize<List<Device>>(devicesJson, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                    MacAddressBox.Clear();
-                    LocationBox.Clear();
+                 
+                    DeviceGrid.ItemsSource = null;
+                    DeviceGrid.ItemsSource = devices;
+
+                    MessageBox.Show("Devices loaded successfully!", "Success");
                 }
                 else
                 {
-                    MessageBox.Show($"Registration failed: {response.StatusCode}",
-                        "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    MessageBox.Show("Upload failed on the server side.", "Error");
                 }
             }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Registration error: {ex.Message}",
-                    "Error", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
+    }
+
+   
+    public class TelemetryData
+    {
+        public int Id { get; set; }
+        public string DeviceId { get; set; } = string.Empty;
+        public string SensorType { get; set; } = string.Empty;
+        public double Value { get; set; }
+        public string Unit { get; set; } = string.Empty;
+        public DateTime Timestamp { get; set; }
+        public bool IsConnected { get; set; }
+    }
+
+    public class Device
+    {
+        public string MacAddress { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public bool IsActive { get; set; } = true;
     }
 }

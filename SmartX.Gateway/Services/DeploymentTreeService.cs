@@ -1,8 +1,7 @@
 ﻿namespace SmartX.Gateway.Services
 {
    
-    /// Represents a node in the device deployment tree.
-    /// Each node can have child nodes (sub-zones, devices, etc.)
+    
     
     public class DeploymentNode
     {
@@ -14,17 +13,11 @@
     }
 
   
-    /// Recursive validation service that walks the deployment tree
-    /// and validates each node, returning a list of issues found.
-    /// 
-    /// Example: Validates that a node is safely configured within
-    /// Sub-Zone B -> Zone 1 -> Facility A.
+   
   
     public class DeploymentTreeService
     {
        
-        /// Recursively validates the entire deployment tree.
-        /// Returns a list of validation issues.
      
         public List<string> ValidateTree(DeploymentNode node, string path = "")
         {
@@ -51,7 +44,7 @@
             return issues;
         }
 
-      
+   
         /// Recursively counts all devices in the tree.
        
         public int CountDevices(DeploymentNode node)

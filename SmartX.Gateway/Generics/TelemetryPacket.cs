@@ -10,8 +10,7 @@
         public string Unit { get; set; } = string.Empty;
 
         
-        /// Parameterless constructor — required by System.Text.Json
-        /// so it can deserialize incoming JSON into this class.
+       
      
         public TelemetryPacket()
         {
@@ -19,9 +18,7 @@
         }
 
       
-        /// Convenience constructor for creating packets in code.
-        /// Note: this is used when you build packets programmatically,
-        /// NOT for JSON deserialization.
+        
        
         public TelemetryPacket(string macAddress, string category, T payload, string unit = "")
         {
@@ -33,13 +30,11 @@
         }
 
        
-        /// Returns a display string for the packet payload.
      
         public string GetDisplayValue() => $"{Payload} {Unit}".Trim();
 
      
-        /// Operator overloading: aggregate two packets of the same type.
-        /// Example: Meter3 = Meter1 + Meter2 (for int/float payloads).
+        
     
         public static TelemetryPacket<T> operator +(TelemetryPacket<T> a, TelemetryPacket<T> b)
         {

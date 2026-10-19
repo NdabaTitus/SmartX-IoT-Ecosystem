@@ -1,0 +1,5 @@
+<Solution>
+  <Folder Name="/Solution Items/" />
+  <Project Path="SmartX.Gateway/SmartX.Gateway.csproj" />
+  <Project Path="SmartX.WPF/SmartX.WPF.csproj" />
+</Solution>

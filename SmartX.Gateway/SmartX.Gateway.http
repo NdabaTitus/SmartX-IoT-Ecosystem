@@ -1,0 +1,6 @@
+@SmartX.Gateway_HostAddress = http://localhost:5044
+
+GET {{SmartX.Gateway_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
