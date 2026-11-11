@@ -17,12 +17,13 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x'
+        dotnet-quality: 'preview'   # <--- THIS IS THE MAGIC FIX FOR .NET 10
         
     - name: Restore dependencies
-      run: dotnet restore SmartX.WPF.sln
+      run: dotnet restore
       
     - name: Build
-      run: dotnet build SmartX.WPF.sln --no-restore
+      run: dotnet build --no-restore
       
     - name: Test
-      run: dotnet test SmartX.WPF.sln --no-build --verbosity normal
+      run: dotnet test --no-build --verbosity normal
