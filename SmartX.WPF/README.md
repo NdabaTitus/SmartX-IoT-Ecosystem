@@ -1,35 +1,50 @@
-﻿# Smart-X IoT Ecosystem - Part 2
+﻿# Smart-X IoT Ecosystem - Final Portfolio of Evidence (PoE)
 
 ## Project Overview
-Smart-X is a hybrid IoT ecosystem built in C# (.NET). It consists of a RESTful API backend (`SmartX.Gateway`) and a Windows desktop client (`SmartX.WPF`). This application fulfills the Part 2 requirements for Real-Time Processing, Advanced Data Structures, and Predictive Action Engines.
+Smart-X is an advanced, full-stack IoT ecosystem built in C# (.NET). It models a mesh network of ESP32 microcontrollers, managing real-time telemetry ingestion, command routing, historical data querying, and network topology optimization. The system consists of an ASP.NET Core Web API backend and a WPF desktop frontend.
 
-##  Architecture & Features
-1. **Authentication:** Secure Login via Firebase REST API.
-2. **Navigation:** 3-Tab dashboard (Part 1, Part 2, Final PoE disabled).
-3. **Advanced Data Structures:**
-   - `Queue<T>` for FIFO telemetry.
-   - `PriorityQueue<T>` for critical alerts (<20% moisture).
-   - `Stack<T>` for manual command undo.
-   - `Dictionary<TKey, TValue>` for instant device registry lookup.
-   - `HashSet<T>` for deduplicating disconnected node alerts.
-4. **Predictive Action Engine:** Analyzes user history and live telemetry to suggest actions in the UI before the user searches.
+##  Architecture & Data Structures
+This project implements several complex data structures to handle high-throughput telemetry and routing:
 
-##  How to Test the Data Structures (Rubric Requirement)
+1. **Binary Search Tree (BST):** Used in `NetworkTopologyService.cs` to store historical telemetry. It allows O(log n) time complexity for querying specific time ranges (e.g., retrieving all data between 14:00 and 16:00) without iterating through a massive list.
+2. **Graph & Minimum Spanning Tree (MST):** Used to model the mesh network. Vertices are nodes, edges are connections. **Prim's Algorithm** is implemented to calculate the most power-efficient routing path for data packets. **BFS** is used for network traversal and self-healing.
+3. **Queues, Stacks, Dictionaries (Part 2):** Used to handle FIFO telemetry, Undo commands (LIFO), O(1) device lookups, and preventing duplicate alerts.
 
-### 1. Dictionary (Device Registry)
+##  How to Run the Application
+
+### Prerequisites
+- Visual Studio 2022 (with .NET Desktop and ASP.NET workloads).
+- .NET 8.0 SDK or higher.
+- Firebase Account (for Authentication).
+
+### Steps
+1. Open the `SmartX.sln` solution in Visual Studio.
+2. Right-click the Solution in Solution Explorer and select **Configure Startup Projects**.
+3. Set both `SmartX.Gateway` (API) and `SmartX.WPF` (Client) to **Start**.
+4. Press **F5** to run both applications.
+5. In the WPF Login window, authenticate using your Firebase credentials.
+
+##  How to Test the Features (PoE Requirements)
+
+### 1. Testing the Binary Search Tree (Historical Queries)
+1. Navigate to **Tab 1** and click **Generate Test Data** a few times.
+2. Wait 2 seconds (the background service pushes the data into the BST).
+3. Navigate to **Tab 3** and click **Query Last 24 Hours**.
+4. The third column will populate with data from the BST, proving efficient time-range querying.
+
+### 2. Testing the Graph and Minimum Spanning Tree (Mesh Routing)
+1. Navigate to **Tab 3**.
+2. Click **Load Network Topology** to see the Graph nodes and their connections.
+3. Click **Calculate Minimum Spanning Tree** to run Prim's Algorithm and view the most power-efficient routing paths.
+
+### 3. Testing the Command Stream (Part 2 Fixes)
+1. Navigate to **Tab 2**.
+2. Click **Turn On Pump** and **Undo Last Command** to test the Stack.
+3. To simulate a high-priority alert (Priority Queue), go to Tab 1, generate data until a value drops below 20, and view the red alert in Tab 2's "Suggested Actions" panel.
+
+### 4. Dictionary (Device Registry)
 1. Create a text file `devices.txt` formatted as: `MAC,Location,Category` (e.g., `AA:BB:CC:DD:EE:01,Zone A,Environmental`).
-2. Run the API and WPF app. Login and navigate to **Tab 2**.
-3. Click **Upload Devices (.txt)**. The text file is parsed and instantly populates the `Dictionary<string, Device>` and the UI grid.
-
-### 2. Simulating a High Priority Alert (PriorityQueue)
-1. Navigate to **Tab 1** and click **Generate Test Data** repeatedly.
-2. The API randomly generates soil moisture values. When a value drops below `20.0`, the API pushes it into the `PriorityQueue<TelemetryData, int>` with priority `1`.
-3. **Result:** Navigate to **Tab 2**. The `PredictiveActionEngine` reads this queue and displays a red **"⚠ CRITICAL"** warning in the Suggested Actions panel.
-
-### 3. Command Undo Stack (Stack)
-1. On **Tab 2**, click **Turn On Pump** and **Toggle Relay**. (These are pushed to the Stack).
-2. Click **Undo Last Command**. It safely pops the Stack.
-3. Click it again when the stack is empty. The API returns a graceful "No commands to undo" message without crashing.
+2. Navigate to **Tab 2** and click **Upload Devices (.txt)**. The text file is parsed and instantly populates the Dictionary and the UI grid.
 
 ---
 
@@ -40,10 +55,10 @@ Smart-X is a hybrid IoT ecosystem built in C# (.NET). It consists of a RESTful A
 During the development of the Smart-X C# prototype, Generative AI (ChatGPT) was utilized as an advanced debugging assistant and architectural guide. It was instrumental in pivoting the project requirements into a functional .NET solution.
 
 **1. Architectural & Data Structure Guidance:**
-The AI provided the exact implementation structure for the `SmartXDataStructures` class, demonstrating how to properly combine `Queue`, `PriorityQueue`, `Stack`, `Dictionary`, and `HashSet` within a unified Singleton service in ASP.NET Core. It also provided the logic for the `PredictiveActionEngine`, specifically the LINQ queries used to analyze user command history and group frequent actions.
+The AI provided the exact implementation structure for the `SmartXDataStructures` class (Part 2) and the `NetworkTopologyService` (Part 3). It demonstrated how to combine `Queue`, `PriorityQueue`, `Stack`, `Dictionary`, `HashSet`, `Binary Search Tree`, and `Graph` structures within a unified ASP.NET Core service. It also provided the logic for Prim's Algorithm for the Minimum Spanning Tree.
 
 **2. Debugging C# and WPF:**
-AI was used to resolve complex WPF threading issues (e.g., ensuring the `DispatcherTimer` correctly invoked async API calls without freezing the UI). It also assisted in troubleshooting the `HttpClient` multipart form data upload, ensuring the C# API correctly parsed the uploaded `.txt` file line-by-line into the device registry.
+AI was used to resolve complex WPF threading issues (e.g., ensuring the `DispatcherTimer` correctly invoked async API calls without freezing the UI). It also assisted in troubleshooting the `HttpClient` multipart form data upload and resolving JSON circular reference errors when passing Graph objects from the API to the WPF client.
 
 **3. Test-Driven Development (TDD):**
 The AI generated the xUnit test cases for the `SmartX.Tests` project. It provided the correct `Assert` methods to verify FIFO behavior in Queues and LIFO behavior in Stacks, ensuring the application met the rubric's data structure requirements without crashing.
