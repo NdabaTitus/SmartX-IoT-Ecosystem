@@ -8,7 +8,6 @@ on:
 
 jobs:
   build:
-    # CHANGE: Use a Windows server instead of Ubuntu, because WPF is Windows-only
     runs-on: windows-latest
 
     steps:
@@ -17,7 +16,7 @@ jobs:
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
-        dotnet-version: '10.0.x'
+        dotnet-version: '10.0.x' 
         
     - name: Restore dependencies
       run: dotnet restore
