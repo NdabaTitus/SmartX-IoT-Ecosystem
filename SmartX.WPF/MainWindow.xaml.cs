@@ -193,7 +193,7 @@ namespace SmartX.WPF
             this.Close();
         }
 
-  
+        
 
         private async void LoadTopology_Click(object sender, RoutedEventArgs e)
         {
@@ -203,7 +203,6 @@ namespace SmartX.WPF
                 var json = await _httpClient.GetStringAsync("/api/telemetry/topology");
                 var nodes = JsonSerializer.Deserialize<List<MeshNodeDto>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-                
                 var displayNodes = nodes.Select(n => new {
                     n.MacAddress,
                     IsOnline = n.IsOnline ? "Online" : "Offline",
@@ -234,9 +233,30 @@ namespace SmartX.WPF
                 MessageBox.Show($"Error calculating MST: {ex.Message}");
             }
         }
+
+        private async void QueryHistory_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isConnected) return;
+            try
+            {
+                
+                var start = DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-ddTHH:mm:ss");
+                var end = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss");
+
+                var json = await _httpClient.GetStringAsync($"/api/telemetry/history/query?start={start}&end={end}");
+                var history = JsonSerializer.Deserialize<List<TelemetryData>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                HistoryGrid.ItemsSource = history;
+                MessageBox.Show($"Retrieved {history.Count} records from the Binary Search Tree.", "BST Query Success");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error querying BST: {ex.Message}");
+            }
+        }
     }
 
-  
+    
     public class TelemetryData
     {
         public int Id { get; set; }
@@ -255,6 +275,7 @@ namespace SmartX.WPF
         public string Category { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
     }
+
 
     public class MeshNodeDto
     {
