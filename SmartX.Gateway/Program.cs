@@ -13,6 +13,8 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddSingleton<TelemetryService>();
 builder.Services.AddSingleton<SmartXDataStructures>();
 builder.Services.AddSingleton<PredictiveActionEngine>();
+builder.Services.AddSingleton<NetworkTopologyService>();
+builder.Services.AddHostedService<TelemetryProcessingService>();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>

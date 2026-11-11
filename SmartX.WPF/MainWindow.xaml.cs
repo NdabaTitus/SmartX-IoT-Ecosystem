@@ -186,15 +186,57 @@ namespace SmartX.WPF
             }
         }
 
-      
         private void LogoutButton_Click(object sender, RoutedEventArgs e)
         {
             var loginWindow = new LoginWindow();
             loginWindow.Show();
             this.Close();
         }
+
+  
+
+        private async void LoadTopology_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isConnected) return;
+            try
+            {
+                var json = await _httpClient.GetStringAsync("/api/telemetry/topology");
+                var nodes = JsonSerializer.Deserialize<List<MeshNodeDto>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                
+                var displayNodes = nodes.Select(n => new {
+                    n.MacAddress,
+                    IsOnline = n.IsOnline ? "Online" : "Offline",
+                    EdgeCount = n.Edges.Count
+                }).ToList();
+
+                TopologyGrid.ItemsSource = displayNodes;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading topology: {ex.Message}");
+            }
+        }
+
+        private async void CalculateMST_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_isConnected) return;
+            try
+            {
+                var json = await _httpClient.GetStringAsync("/api/telemetry/mst");
+                var mstEdges = JsonSerializer.Deserialize<List<MeshEdgeDto>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                MSTGrid.ItemsSource = mstEdges;
+                MessageBox.Show($"Calculated MST with {mstEdges.Count} optimized routing paths.", "Prim's Algorithm Success");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error calculating MST: {ex.Message}");
+            }
+        }
     }
 
+  
     public class TelemetryData
     {
         public int Id { get; set; }
@@ -212,5 +254,19 @@ namespace SmartX.WPF
         public string Location { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public bool IsActive { get; set; } = true;
+    }
+
+    public class MeshNodeDto
+    {
+        public string MacAddress { get; set; } = string.Empty;
+        public bool IsOnline { get; set; }
+        public List<MeshEdgeDto> Edges { get; set; } = new();
+    }
+
+    public class MeshEdgeDto
+    {
+        public string SourceMac { get; set; } = string.Empty;
+        public string TargetMac { get; set; } = string.Empty;
+        public int Weight { get; set; }
     }
 }

@@ -17,35 +17,36 @@ namespace SmartX.Gateway.Controllers
         private readonly DeploymentTreeService _deploymentService;
         private readonly SmartXDataStructures _dataStructures;
         private readonly PredictiveActionEngine _predictiveEngine;
+        private readonly NetworkTopologyService _topologyService; 
 
         public TelemetryController(
             TelemetryService telemetryService,
             SmartXDataStructures dataStructures,
-            PredictiveActionEngine predictiveEngine)
+            PredictiveActionEngine predictiveEngine,
+            NetworkTopologyService topologyService) 
         {
             _telemetryService = telemetryService;
             _dataStructures = dataStructures;
             _predictiveEngine = predictiveEngine;
+            _topologyService = topologyService; 
             _deploymentService = new DeploymentTreeService();
         }
 
       
+
         [HttpPost]
         public IActionResult ReceiveTelemetry([FromBody] TelemetryData data)
         {
             if (string.IsNullOrEmpty(data.DeviceId))
                 return BadRequest(new { message = "DeviceId is required" });
 
-       
             _dataStructures.TelemetryQueue.Enqueue(data);
 
-         
             _dataStructures.SensorTimeline[DateTime.Now] = data;
 
-           
             if (data.SensorType == "SoilMoisture" && data.Value < 20.0)
             {
-                _dataStructures.CriticalAlertQueue.Enqueue(data, 1); 
+                _dataStructures.CriticalAlertQueue.Enqueue(data, 1);
             }
 
             var saved = _telemetryService.AddTelemetry(data);
@@ -68,17 +69,13 @@ namespace SmartX.Gateway.Controllers
             return Ok(insights);
         }
 
-
         [HttpPost("command")]
         public IActionResult IssueCommand([FromBody] Command command)
         {
             if (command == null || string.IsNullOrEmpty(command.DeviceMacAddress))
                 return BadRequest(new { message = "Invalid command." });
 
-          
             _predictiveEngine.LogAction("COMMAND", command.Action);
-
-            
             _dataStructures.CommandUndoStack.Push(command);
 
             return Ok(new { message = $"Command '{command.Action}' issued to {command.DeviceMacAddress}." });
@@ -95,7 +92,6 @@ namespace SmartX.Gateway.Controllers
             return Ok(new { message = $"Undid command '{undoneCommand.Action}' on {undoneCommand.DeviceMacAddress}." });
         }
 
-       
         [HttpPost("upload-devices")]
         public async Task<IActionResult> UploadDeviceList(IFormFile file)
         {
@@ -110,7 +106,6 @@ namespace SmartX.Gateway.Controllers
             {
                 if (string.IsNullOrWhiteSpace(line)) continue;
 
-               
                 var parts = line.Split(',');
                 if (parts.Length >= 3)
                 {
@@ -129,14 +124,12 @@ namespace SmartX.Gateway.Controllers
             return Ok(new { message = $"Successfully loaded {count} devices into the registry." });
         }
 
-  
         [HttpGet("devices")]
         public IActionResult GetDevices()
         {
             return Ok(_dataStructures.DeviceRegistry.Values);
         }
 
-      
         [HttpPost("generic")]
         public IActionResult ReceiveGenericPacket([FromBody] TelemetryPacket<double> packet)
         {
@@ -228,6 +221,30 @@ namespace SmartX.Gateway.Controllers
             if (root == null) return BadRequest(new { message = "Deployment root is required." });
             var issues = _deploymentService.ValidateTree(root);
             return Ok(new { totalDevices = _deploymentService.CountDevices(root), issueCount = issues.Count, issues, isValid = issues.Count == 0 });
+        }
+
+       
+
+        [HttpGet("topology")]
+        public IActionResult GetTopology()
+        {
+            
+            return Ok(_topologyService.NetworkGraph.Nodes.Values);
+        }
+
+        [HttpGet("mst")]
+        public IActionResult GetMinimumSpanningTree()
+        {
+            
+            return Ok(_topologyService.NetworkGraph.GetMinimumSpanningTree());
+        }
+
+        [HttpGet("history/query")]
+        public IActionResult QueryHistory([FromQuery] DateTime start, [FromQuery] DateTime end)
+        {
+            
+            var results = _topologyService.HistoricalDataTree.GetRange(start, end);
+            return Ok(results);
         }
     }
 
