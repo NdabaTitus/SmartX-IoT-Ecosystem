@@ -193,9 +193,7 @@ namespace SmartX.WPF
             this.Close();
         }
 
-        // =========================================================
-        // PART 3: NETWORK TOPOLOGY LOGIC
-        // =========================================================
+      
 
         private async void LoadTopology_Click(object sender, RoutedEventArgs e)
         {
@@ -236,7 +234,6 @@ namespace SmartX.WPF
             }
         }
 
-        // 👇 THIS IS THE UPDATED QUERY HISTORY METHOD 👇
         private async void QueryHistory_Click(object sender, RoutedEventArgs e)
         {
             if (!_isConnected) return;
@@ -260,9 +257,7 @@ namespace SmartX.WPF
         }
     }
 
-    // =========================================================
-    // DATA MODELS
-    // =========================================================
+    
     public class TelemetryData
     {
         public int Id { get; set; }
