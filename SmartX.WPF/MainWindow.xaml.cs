@@ -193,7 +193,9 @@ namespace SmartX.WPF
             this.Close();
         }
 
-        
+        // =========================================================
+        // PART 3: NETWORK TOPOLOGY LOGIC
+        // =========================================================
 
         private async void LoadTopology_Click(object sender, RoutedEventArgs e)
         {
@@ -234,14 +236,16 @@ namespace SmartX.WPF
             }
         }
 
+        // 👇 THIS IS THE UPDATED QUERY HISTORY METHOD 👇
         private async void QueryHistory_Click(object sender, RoutedEventArgs e)
         {
             if (!_isConnected) return;
             try
             {
-                
-                var start = DateTime.UtcNow.AddDays(-1).ToString("yyyy-MM-ddTHH:mm:ss");
-                var end = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss");
+                // Use DateTime.Now (Local time) to match the Backend.
+                // Widen the range (-2 days to +2 days) to ensure it catches the data.
+                var start = DateTime.Now.AddDays(-2).ToString("yyyy-MM-ddTHH:mm:ss");
+                var end = DateTime.Now.AddDays(2).ToString("yyyy-MM-ddTHH:mm:ss");
 
                 var json = await _httpClient.GetStringAsync($"/api/telemetry/history/query?start={start}&end={end}");
                 var history = JsonSerializer.Deserialize<List<TelemetryData>>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -256,7 +260,9 @@ namespace SmartX.WPF
         }
     }
 
-    
+    // =========================================================
+    // DATA MODELS
+    // =========================================================
     public class TelemetryData
     {
         public int Id { get; set; }
@@ -276,7 +282,7 @@ namespace SmartX.WPF
         public bool IsActive { get; set; } = true;
     }
 
-
+    // DTOs for Part 3 Graph Deserialization
     public class MeshNodeDto
     {
         public string MacAddress { get; set; } = string.Empty;
